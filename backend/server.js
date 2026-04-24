@@ -229,6 +229,10 @@ app.post("/bfhl", (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`BFHL API running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`BFHL API running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
