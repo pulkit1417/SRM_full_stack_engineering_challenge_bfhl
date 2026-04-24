@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './index.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://pulkitgupta-bfhl.vercel.app/'
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://pulkitgupta-bfhl.vercel.app'
 // const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const EXAMPLE = [
