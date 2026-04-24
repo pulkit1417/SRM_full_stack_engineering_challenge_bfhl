@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import './index.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://pulkitgupta-bfhl.vercel.app'
-// const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const EXAMPLE = [
   "A->B", "A->C", "B->D", "C->E", "E->F",
@@ -18,10 +17,10 @@ function useAnimCount(target) {
   useEffect(() => {
     let raf
     const t0 = performance.now()
-    const dur = 500
+    const dur = 600
     const tick = (now) => {
       const p = Math.min((now - t0) / dur, 1)
-      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))))
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 4))))
       if (p < 1) raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -32,21 +31,23 @@ function useAnimCount(target) {
 
 /* ── Tree node (recursive) ── */
 function TreeNodeEl({ nodeKey, subtree, isRoot }) {
-  const children = isRoot
-    ? (subtree[nodeKey] ?? {})
-    : subtree
+  const children = isRoot ? (subtree[nodeKey] ?? {}) : subtree
   const keys = Object.keys(children).sort()
 
   return (
-    <div className="tree-wrap">
-      <div className="tree-row">
-        <span className="tree-lbl">{nodeKey}</span>
+    <div className="font-mono text-[13px] leading-relaxed">
+      <div className="flex items-center gap-2">
+        <span className={isRoot ? "font-bold text-zinc-900 dark:text-white text-base" : "text-zinc-600 dark:text-zinc-300"}>
+          {nodeKey}
+        </span>
       </div>
       {keys.length > 0 && (
-        <div className="tree-children">
+        <div className="pl-1">
           {keys.map((ck, ci) => (
-            <div className="tree-row" key={ck}>
-              <span className="tree-arm">{ci === keys.length - 1 ? '└ ' : '├ '}</span>
+            <div className="flex items-start" key={ck}>
+              <span className="text-zinc-300 dark:text-zinc-700 mr-2 select-none">
+                {ci === keys.length - 1 ? '└─' : '├─'}
+              </span>
               <TreeNodeEl nodeKey={ck} subtree={children[ck]} isRoot={false} />
             </div>
           ))}
@@ -57,58 +58,26 @@ function TreeNodeEl({ nodeKey, subtree, isRoot }) {
 }
 
 /* ── Hierarchy card ── */
-function HCard({ h, index }) {
+function HCard({ h }) {
   return (
-    <div className={`hcard${h.has_cycle ? ' cyclic' : ''}`} style={{ animationDelay: `${index * 45}ms` }}>
-      <div className="hcard-head">
-        <span className="hcard-root">{h.root}</span>
-        {h.has_cycle
-          ? <span className="badge badge-cycle">CYCLE</span>
-          : h.depth !== undefined && <span className="badge badge-depth">depth {h.depth}</span>
-        }
-      </div>
-      {h.has_cycle
-        ? <span className="cyclenote">Cyclic — tree not built.</span>
-        : <TreeNodeEl nodeKey={h.root} subtree={h.tree || {}} isRoot={true} />
-      }
-    </div>
-  )
-}
-
-/* ── Tag list ── */
-function TagList({ items, cls }) {
-  if (!items.length) return <span className="tag tag-none">None</span>
-  return items.map((item, i) => (
-    <span key={i} className={`tag ${cls}`}>{item}</span>
-  ))
-}
-
-/* ── Stats with animated counters ── */
-function SummaryBar({ summary }) {
-  const trees  = useAnimCount(summary.total_trees  || 0)
-  const cycles = useAnimCount(summary.total_cycles || 0)
-  return (
-    <div className="summary-bar">
-      <div className="sum-stats">
-        <div className="sum-stat">
-          <span className="sum-val">{trees}</span>
-          <span className="sum-key">Trees</span>
-        </div>
-        <div className="sum-div" />
-        <div className="sum-stat">
-          <span className="sum-val v-red">{cycles}</span>
-          <span className="sum-key">Cycles</span>
-        </div>
-        <div className="sum-div" />
-        <div className="sum-stat">
-          <span className="sum-val v-teal">{summary.largest_tree_root || '—'}</span>
-          <span className="sum-key">Largest Root</span>
+    <div className={`glass-card rounded-2xl p-5 ${h.has_cycle ? 'border-red-200/50 dark:border-red-900/50' : ''}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xl font-medium text-zinc-900 dark:text-white">{h.root}</span>
+          {h.has_cycle ? (
+            <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400">Cycle</span>
+          ) : (
+            <span className="text-[10px] font-medium tracking-wider uppercase text-zinc-400 dark:text-zinc-500">Depth {h.depth}</span>
+          )}
         </div>
       </div>
-      <div className="ok-badge">
-        <span className="ok-dot" />
-        <span>200 OK</span>
-      </div>
+      {h.has_cycle ? (
+        <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">Tree cannot be built due to cyclic reference.</p>
+      ) : (
+        <div className="bg-zinc-50/50 dark:bg-zinc-950/50 rounded-xl p-4 border border-zinc-100 dark:border-zinc-800/50">
+          <TreeNodeEl nodeKey={h.root} subtree={h.tree || {}} isRoot={true} />
+        </div>
+      )}
     </div>
   )
 }
@@ -116,16 +85,19 @@ function SummaryBar({ summary }) {
 /* ── Main App ── */
 export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('bfhl-theme') === 'dark')
-  const [userId, setUserId]   = useState('pulkitgupta_24082005')
-  const [email,  setEmail]    = useState('pg1736@srmist.edu.in')
-  const [roll,   setRoll]     = useState('RA23110028030014')
-  const [input,  setInput]    = useState('')
+  
+  // Form State
+  const [userId, setUserId] = useState('pulkitgupta_24082005')
+  const [email, setEmail] = useState('pg1736@srmist.edu.in')
+  const [roll, setRoll] = useState('RA23110028030014')
+  const [input, setInput] = useState('')
+  
+  // UI State
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
-  const [status,  setStatus]  = useState(null) // { type: 'ok'|'err', text }
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState(null)
   const [results, setResults] = useState(null)
-  const [tab,     setTab]     = useState('visual')
-  const [copied,  setCopied]  = useState(false)
+  const [tab, setTab] = useState('visual')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -133,18 +105,9 @@ export default function App() {
   }, [dark])
 
   const toggleTheme = () => setDark(d => !d)
-
   const clearFeedback = () => { setError(''); setStatus(null) }
-
   const handleExample = () => { setInput(JSON.stringify(EXAMPLE, null, 2)); clearFeedback() }
-  const handleClear   = () => { setInput(''); clearFeedback(); setResults(null) }
-
-  const handleCopy = () => {
-    if (!results) return
-    navigator.clipboard.writeText(JSON.stringify(results, null, 2)).then(() => {
-      setCopied(true); setTimeout(() => setCopied(false), 2000)
-    })
-  }
+  const handleClear = () => { setInput(''); clearFeedback(); setResults(null) }
 
   const handleSubmit = async () => {
     clearFeedback()
@@ -156,11 +119,11 @@ export default function App() {
     catch { setError('Invalid JSON. Example: ["A->B", "B->C"]'); return }
 
     if (!Array.isArray(parsed)) { setError('Input must be a JSON array.'); return }
-    if (!userId.trim()) { setError('User ID cannot be empty.'); return }
+    if (!userId.trim()) { setError('User ID is required.'); return }
 
     setLoading(true)
     try {
-      const res  = await fetch(`${API_BASE}/bfhl`, {
+      const res = await fetch(`${API_BASE}/bfhl`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,199 +134,186 @@ export default function App() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || `API error: ${res.status}`); return }
+      if (!res.ok) { setError(data.error || `API Error ${res.status}`); return }
       setResults(data)
-      const g = (data.hierarchies || []).length
-      setStatus({ type: 'ok', text: `200 OK — ${g} group${g !== 1 ? 's' : ''} found` })
+      const count = (data.hierarchies || []).length
+      setStatus({ type: 'ok', text: `Analyzed successfully: ${count} tree${count !== 1 ? 's' : ''} found.` })
       setTab('visual')
     } catch {
-      setError(`Could not reach the API at ${API_BASE}. Is the backend running?`)
+      setError(`Network error: Could not reach ${API_BASE}`)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8] dark:bg-[#0d0e14] text-[#0d0f1a] dark:text-[#eceef8] text-sm antialiased transition-colors duration-200">
-      {/* ── Top strip — both items centered ── */}
-      <div className="h-11 flex items-center justify-center gap-4 bg-white dark:bg-[#13141e] border-b border-[#e2e5ef] dark:border-white/[0.07] sticky top-0 z-40">
-        <span className="inline-flex items-center border border-[#cdd1e0] dark:border-white/[0.13] rounded-full overflow-hidden font-mono text-[11px] font-semibold">
-          <span className="bg-[#5b4cf5] dark:bg-[#7b6df8] text-white px-[10px] py-[3px] tracking-[0.04em]">POST</span>
-          <span className="bg-[#eef0f5] dark:bg-[#1a1b28] text-[#5a5e74] dark:text-[#818699] px-[10px] py-[3px]">/bfhl</span>
-        </span>
-        <button
-          id="btn-theme"
-          aria-label="Toggle theme"
-          onClick={toggleTheme}
-          className="w-[30px] h-[30px] flex items-center justify-center bg-transparent border border-[#e2e5ef] dark:border-white/[0.07] rounded-[5px] text-[#5a5e74] dark:text-[#818699] cursor-pointer transition-all hover:bg-[#eef0f5] dark:hover:bg-[#1a1b28] hover:text-[#0d0f1a] dark:hover:text-[#eceef8] hover:border-[#cdd1e0] dark:hover:border-white/[0.13]"
-        >
-          {dark ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-            </svg>
-          ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-          )}
-        </button>
-      </div>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-500">
+      <div className="max-w-3xl mx-auto px-5 py-12 md:py-20 flex flex-col gap-12">
+        
+        {/* ── Header ── */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Hierarchy Analyzer</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">SRM Engineering Challenge</p>
+          </div>
+          <button 
+            onClick={toggleTheme}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            aria-label="Toggle theme"
+          >
+            {dark ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            )}
+          </button>
+        </header>
 
-      {/* ── Workspace ── */}
-      <main className="workspace">
-
-        {/* ── Input panel ── */}
-        <section className="panel panel-input">
-
-          {/* Identity card */}
-          <div className="panel-card">
-            <div className="card-label">Identity</div>
-            <div className="field">
-              <label htmlFor="field-userid">User ID</label>
-              <input id="field-userid" type="text" value={userId} onChange={e => setUserId(e.target.value)} spellCheck="false" autoComplete="off" />
-              <span className="field-hint">fullname_ddmmyyyy</span>
+        {/* ── Input Section ── */}
+        <section className="flex flex-col gap-8">
+          
+          {/* Identity Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">User ID</label>
+              <input type="text" value={userId} onChange={e => setUserId(e.target.value)} spellCheck="false" 
+                className="bg-transparent border-b border-zinc-200 dark:border-zinc-800 py-2 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors" />
             </div>
-            <div className="field-row-2">
-              <div className="field">
-                <label htmlFor="field-email">Email</label>
-                <input id="field-email" type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck="false" autoComplete="off" />
-              </div>
-              <div className="field">
-                <label htmlFor="field-roll">Roll Number</label>
-                <input id="field-roll" type="text" value={roll} onChange={e => setRoll(e.target.value)} spellCheck="false" autoComplete="off" />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck="false" 
+                className="bg-transparent border-b border-zinc-200 dark:border-zinc-800 py-2 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Roll Number</label>
+              <input type="text" value={roll} onChange={e => setRoll(e.target.value)} spellCheck="false" 
+                className="bg-transparent border-b border-zinc-200 dark:border-zinc-800 py-2 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-colors" />
             </div>
           </div>
 
-          {/* Node data card */}
-          <div className="panel-card">
-            <div className="card-label">
-              Node Data
-              <span className="mono-chip">JSON Array</span>
-            </div>
-            <div className="ta-wrap">
-              <textarea
-                id="node-input"
-                rows="10"
-                spellCheck="false"
-                placeholder='["A->B", "A->C", "B->D"]'
-                value={input}
-                onChange={e => setInput(e.target.value)}
-              />
-              <div className="ta-bar">
-                <span className="ta-hint"><code>X-&gt;Y</code> — single uppercase letters A–Z</span>
-                <button id="btn-example" className="txt-btn" onClick={handleExample}>Example</button>
-                <button id="btn-clear" className="txt-btn" onClick={handleClear}>Clear</button>
+          {/* JSON Data */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-end justify-between">
+              <label className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Node Data</label>
+              <div className="flex items-center gap-3">
+                <button onClick={handleExample} className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Example</button>
+                <button onClick={handleClear} className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Clear</button>
               </div>
             </div>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder='["A->B", "A->C", "B->D"]'
+              spellCheck="false"
+              className="w-full glass-card rounded-2xl p-5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-700 transition-all resize-y min-h-[160px] leading-relaxed"
+            />
           </div>
 
-          {/* Submit */}
-          <div className="submit-wrap mt-1">
-            <button id="btn-submit" className="submit-btn" onClick={handleSubmit} disabled={loading}>
-              {!loading && (
-                <svg className="s-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
+          {/* Submit Action */}
+          <div className="flex flex-col gap-4">
+            <button 
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="w-full relative overflow-hidden bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium py-3.5 rounded-2xl transition-transform active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-3"
+            >
+              {loading ? (
+                <svg className="w-5 h-5 text-zinc-500 spinner-circle" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                 </svg>
+              ) : (
+                <span className="tracking-wide">Run Analysis</span>
               )}
-              <span className="s-label">{loading ? '' : 'Run API'}</span>
-              {loading && <span className="s-spinner" />}
             </button>
 
-            {status && !error && (
-              <div id="run-status" className={`run-status ${status.type}`}>
-                <span id="rs-icon">{status.type === 'ok' ? '✓' : '✕'}</span>
-                <span id="rs-text">{status.text}</span>
+            {/* Status Messages */}
+            {error && (
+              <div className="flex items-center gap-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-4 py-3 rounded-xl">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {error}
               </div>
             )}
-
-            {error && (
-              <div id="error-box" className="error-box">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span id="error-msg">{error}</span>
+            {status && !error && (
+              <div className="flex items-center gap-3 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-4 py-3 rounded-xl">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                {status.text}
               </div>
             )}
           </div>
         </section>
 
-        {/* ── Output panel ── */}
-        <section className="panel panel-output">
-
-          {!results ? (
-            <div className="empty-state" id="empty-state">
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
-                <line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/>
-              </svg>
-              <p className="empty-title">No results yet</p>
-              <p className="empty-desc">Fill in your credentials and node array, then click <strong>Run API</strong>.</p>
+        {/* ── Results Section ── */}
+        {results && (
+          <section className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
+            
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="glass-card rounded-2xl p-5 flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Total Trees</span>
+                <span className="text-3xl font-light tabular-nums">{results.summary?.total_trees || 0}</span>
+              </div>
+              <div className="glass-card rounded-2xl p-5 flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Cycles</span>
+                <span className={`text-3xl font-light tabular-nums ${results.summary?.total_cycles > 0 ? 'text-red-500' : ''}`}>
+                  {results.summary?.total_cycles || 0}
+                </span>
+              </div>
+              <div className="glass-card rounded-2xl p-5 flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Largest Root</span>
+                <span className="text-3xl font-light font-mono text-indigo-500">{results.summary?.largest_tree_root || '—'}</span>
+              </div>
             </div>
-          ) : (
-            <div id="results" className="results-wrap">
 
-              {/* Summary bar */}
-              <SummaryBar summary={results.summary || {}} />
+            {/* Tabs */}
+            <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800">
+              <button onClick={() => setTab('visual')} className={`pb-3 px-2 text-sm font-medium transition-colors border-b-2 ${tab === 'visual' ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Visualizer</button>
+              <button onClick={() => setTab('json')} className={`pb-3 px-2 text-sm font-medium transition-colors border-b-2 ${tab === 'json' ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}>Raw JSON</button>
+            </div>
 
-              {/* Hierarchies */}
-              <div className="out-card">
-                <div className="out-hdr">
-                  <span className="out-title">Hierarchies</span>
-                  <div className="seg">
-                    <button className={`seg-btn${tab === 'visual' ? ' active' : ''}`} id="vtab-visual" onClick={() => setTab('visual')}>Visual</button>
-                    <button className={`seg-btn${tab === 'json' ? ' active' : ''}`} id="vtab-json" onClick={() => setTab('json')}>JSON</button>
-                  </div>
+            {/* Content */}
+            {tab === 'visual' ? (
+              <div className="flex flex-col gap-8">
+                {/* Visual Trees */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(results.hierarchies || []).map((h, i) => <HCard key={i} h={h} />)}
                 </div>
-                {tab === 'visual' ? (
-                  <div id="h-visual" className="h-visual">
-                    {(results.hierarchies || []).map((h, i) => <HCard key={i} h={h} index={i} />)}
-                  </div>
-                ) : (
-                  <div id="h-json">
-                    <pre id="h-json-pre">{JSON.stringify(results.hierarchies || [], null, 2)}</pre>
+
+                {/* Warnings */}
+                {(results.invalid_entries?.length > 0 || results.duplicate_edges?.length > 0) && (
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {results.invalid_entries?.length > 0 && (
+                      <div className="flex-1 glass-card rounded-2xl p-5">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Invalid Entries</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {results.invalid_entries.map((item, i) => (
+                            <span key={i} className="font-mono text-[11px] px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/50">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {results.duplicate_edges?.length > 0 && (
+                      <div className="flex-1 glass-card rounded-2xl p-5">
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Duplicate Edges</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {results.duplicate_edges.map((item, i) => (
+                            <span key={i} className="font-mono text-[11px] px-2.5 py-1 rounded-md bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/50">{item}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-
-              {/* Invalid + Duplicates */}
-              <div className="out-two">
-                <div className="out-card">
-                  <div className="out-hdr"><span className="out-title">Invalid Entries</span></div>
-                  <div className="tag-list" id="list-invalid">
-                    <TagList items={results.invalid_entries || []} cls="tag-invalid" />
-                  </div>
-                </div>
-                <div className="out-card">
-                  <div className="out-hdr"><span className="out-title">Duplicate Edges</span></div>
-                  <div className="tag-list" id="list-dup">
-                    <TagList items={results.duplicate_edges || []} cls="tag-dup" />
-                  </div>
-                </div>
+            ) : (
+              <div className="glass-card rounded-2xl p-5 overflow-x-auto">
+                <pre className="text-[11px] font-mono leading-relaxed text-zinc-800 dark:text-zinc-200">
+                  {JSON.stringify(results, null, 2)}
+                </pre>
               </div>
+            )}
+          </section>
+        )}
 
-              {/* Raw response */}
-              <div className="out-card">
-                <div className="out-hdr">
-                  <span className="out-title">Raw Response</span>
-                  <button className="ghost-btn" id="btn-copy" onClick={handleCopy}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-                <pre className="raw-pre" id="raw-pre">{JSON.stringify(results, null, 2)}</pre>
-              </div>
-
-            </div>
-          )}
-        </section>
-
-      </main>
+      </div>
     </div>
   )
 }
